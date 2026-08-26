@@ -1,0 +1,1749 @@
+{
+  "datasets": [
+    {
+      "name": "executive_kpis",
+      "displayName": "Executive KPIs",
+      "queryLines": [
+        "SELECT\n",
+        "  total_customers,\n",
+        "  active_subscriptions,\n",
+        "  total_billed_revenue,\n",
+        "  total_collected_revenue,\n",
+        "  total_outstanding_amount,\n",
+        "  total_complaints,\n",
+        "  high_risk_customers\n",
+        "FROM\n",
+        "  telecom.gold.vw_executive_kpis"
+      ],
+      "columns": [
+        {
+          "displayName": "churn_rate_pct",
+          "description": "Percentage of customers at high churn risk",
+          "expression": "ROUND((high_risk_customers * 100.0 / total_customers), 2)"
+        },
+        {
+          "displayName": "arpu",
+          "description": "Average Revenue Per User",
+          "expression": "ROUND(total_billed_revenue / active_subscriptions, 2)"
+        },
+        {
+          "displayName": "payment_success_pct",
+          "description": "Payment collection success rate",
+          "expression": "ROUND((total_collected_revenue * 100.0 / total_billed_revenue), 2)"
+        },
+        {
+          "displayName": "retention_rate_pct",
+          "description": "Customer retention rate",
+          "expression": "ROUND(100.0 - (high_risk_customers * 100.0 / total_customers), 2)"
+        }
+      ],
+      "catalog": "telecom",
+      "schema": "gold"
+    },
+    {
+      "name": "high_risk_customers",
+      "displayName": "High-Risk Customers",
+      "queryLines": [
+        "SELECT\n",
+        "  customer_id,\n",
+        "  customer_name,\n",
+        "  current_plan,\n",
+        "  customer_status,\n",
+        "  outstanding_amount,\n",
+        "  total_complaints,\n",
+        "  failed_payments,\n",
+        "  payment_success_rate,\n",
+        "  churn_risk_score,\n",
+        "  churn_risk_level\n",
+        "FROM\n",
+        "  telecom.gold.customer_360\n",
+        "WHERE\n",
+        "  churn_risk_level = 'HIGH'\n",
+        "ORDER BY\n",
+        "  churn_risk_score DESC,\n",
+        "  outstanding_amount DESC\n",
+        "LIMIT 20"
+      ]
+    },
+    {
+      "name": "plan_performance",
+      "displayName": "Plan Performance",
+      "queryLines": [
+        "SELECT\n",
+        "  plan_name,\n",
+        "  total_revenue,\n",
+        "  active_subscriptions,\n",
+        "  cancelled_subscriptions,\n",
+        "  total_data_gb\n",
+        "FROM\n",
+        "  telecom.gold.vw_plan_performance\n",
+        "ORDER BY\n",
+        "  total_revenue DESC"
+      ]
+    },
+    {
+      "name": "usage_analysis",
+      "displayName": "Usage Analysis",
+      "queryLines": [
+        "SELECT\n",
+        "  year_month,\n",
+        "  total_call_minutes,\n",
+        "  total_sms,\n",
+        "  total_data_gb,\n",
+        "  year,\n",
+        "  month\n",
+        "FROM\n",
+        "  telecom.gold.vw_usage_analysis\n",
+        "ORDER BY\n",
+        "  year,\n",
+        "  month"
+      ]
+    },
+    {
+      "name": "revenue_analysis",
+      "displayName": "Revenue Analysis",
+      "queryLines": [
+        "SELECT\n",
+        "  year_month,\n",
+        "  net_billed_amount,\n",
+        "  year,\n",
+        "  month,\n",
+        "  paid_bills,\n",
+        "  unpaid_bills,\n",
+        "  overdue_bills\n",
+        "FROM\n",
+        "  telecom.gold.vw_revenue_analysis\n",
+        "ORDER BY\n",
+        "  year,\n",
+        "  month"
+      ]
+    },
+    {
+      "name": "complaint_analysis",
+      "displayName": "Complaint Analysis",
+      "queryLines": [
+        "SELECT\n",
+        "  category_name,\n",
+        "  total_complaints,\n",
+        "  open_complaints,\n",
+        "  in_progress_complaints,\n",
+        "  resolved_complaints,\n",
+        "  avg_resolution_days\n",
+        "FROM\n",
+        "  telecom.gold.vw_complaint_analysis\n",
+        "ORDER BY\n",
+        "  total_complaints DESC"
+      ]
+    },
+    {
+      "name": "churn_risk",
+      "displayName": "Churn Risk Distribution",
+      "queryLines": [
+        "SELECT\n",
+        "  churn_risk_level,\n",
+        "  COUNT(*) AS customer_count,\n",
+        "  ROUND(SUM(outstanding_amount), 2) AS outstanding_amount\n",
+        "FROM\n",
+        "  telecom.gold.customer_360\n",
+        "GROUP BY\n",
+        "  churn_risk_level\n",
+        "ORDER BY\n",
+        "  CASE churn_risk_level\n",
+        "    WHEN 'HIGH' THEN 1\n",
+        "    WHEN 'MEDIUM' THEN 2\n",
+        "    WHEN 'LOW' THEN 3\n",
+        "  END"
+      ]
+    },
+    {
+      "name": "resolution_status_series",
+      "displayName": "Resolution Status by Category",
+      "queryLines": [
+        "SELECT\n",
+        "  category_name,\n",
+        "  'Open' as status_type,\n",
+        "  open_complaints as count\n",
+        "FROM\n",
+        "  telecom.gold.vw_complaint_analysis\n",
+        "UNION ALL\n",
+        "SELECT\n",
+        "  category_name,\n",
+        "  'In Progress' as status_type,\n",
+        "  in_progress_complaints as count\n",
+        "FROM\n",
+        "  telecom.gold.vw_complaint_analysis\n",
+        "UNION ALL\n",
+        "SELECT\n",
+        "  category_name,\n",
+        "  'Resolved' as status_type,\n",
+        "  resolved_complaints as count\n",
+        "FROM\n",
+        "  telecom.gold.vw_complaint_analysis\n",
+        "ORDER BY\n",
+        "  category_name,\n",
+        "  CASE status_type\n",
+        "    WHEN 'Open' THEN 1\n",
+        "    WHEN 'In Progress' THEN 2\n",
+        "    ELSE 3\n",
+        "  END"
+      ]
+    },
+    {
+      "name": "billing_status_series",
+      "displayName": "Billing Status by Month",
+      "queryLines": [
+        "SELECT\n",
+        "  year_month,\n",
+        "  'Paid' as status_type,\n",
+        "  paid_bills as count\n",
+        "FROM\n",
+        "  telecom.gold.vw_revenue_analysis\n",
+        "UNION ALL\n",
+        "SELECT\n",
+        "  year_month,\n",
+        "  'Unpaid' as status_type,\n",
+        "  unpaid_bills as count\n",
+        "FROM\n",
+        "  telecom.gold.vw_revenue_analysis\n",
+        "UNION ALL\n",
+        "SELECT\n",
+        "  year_month,\n",
+        "  'Overdue' as status_type,\n",
+        "  overdue_bills as count\n",
+        "FROM\n",
+        "  telecom.gold.vw_revenue_analysis\n",
+        "ORDER BY\n",
+        "  year_month,\n",
+        "  CASE status_type\n",
+        "    WHEN 'Paid' THEN 1\n",
+        "    WHEN 'Unpaid' THEN 2\n",
+        "    ELSE 3\n",
+        "  END"
+      ]
+    }
+  ],
+  "pages": [
+    {
+      "name": "ab9b639c",
+      "displayName": "Telecom Customer & Revenue Analytics Dashboard",
+      "layout": [
+        {
+          "widget": {
+            "name": "total_customers",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "executive_kpis",
+                  "fields": [
+                    {
+                      "name": "sum(total_customers)",
+                      "expression": "SUM(`total_customers`)"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              }
+            ],
+            "spec": {
+              "frame": {
+                "showTitle": true,
+                "title": "Total Customers"
+              },
+              "version": 2,
+              "widgetType": "counter",
+              "encodings": {
+                "value": {
+                  "fieldName": "sum(total_customers)",
+                  "rowNumber": 0
+                }
+              },
+              "data": {
+                "queryName": "main_query"
+              }
+            }
+          },
+          "position": {
+            "x": 0,
+            "y": 0,
+            "width": 4,
+            "height": 5
+          }
+        },
+        {
+          "widget": {
+            "name": "active_subscriptions",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "executive_kpis",
+                  "fields": [
+                    {
+                      "name": "sum(active_subscriptions)",
+                      "expression": "SUM(`active_subscriptions`)"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              }
+            ],
+            "spec": {
+              "frame": {
+                "showTitle": true,
+                "title": "Active Subscriptions"
+              },
+              "version": 2,
+              "widgetType": "counter",
+              "encodings": {
+                "value": {
+                  "fieldName": "sum(active_subscriptions)",
+                  "rowNumber": 0
+                }
+              },
+              "data": {
+                "queryName": "main_query"
+              }
+            }
+          },
+          "position": {
+            "x": 4,
+            "y": 0,
+            "width": 4,
+            "height": 5
+          }
+        },
+        {
+          "widget": {
+            "name": "high_risk_customers",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "executive_kpis",
+                  "fields": [
+                    {
+                      "name": "sum(high_risk_customers)",
+                      "expression": "SUM(`high_risk_customers`)"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              }
+            ],
+            "spec": {
+              "frame": {
+                "showTitle": true,
+                "title": "High Risk Customers"
+              },
+              "version": 2,
+              "widgetType": "counter",
+              "encodings": {
+                "value": {
+                  "fieldName": "sum(high_risk_customers)",
+                  "rowNumber": 0
+                }
+              },
+              "data": {
+                "queryName": "main_query"
+              }
+            }
+          },
+          "position": {
+            "x": 8,
+            "y": 0,
+            "width": 4,
+            "height": 5
+          }
+        },
+        {
+          "widget": {
+            "name": "total_billed_revenue",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "executive_kpis",
+                  "fields": [
+                    {
+                      "name": "sum(total_billed_revenue)",
+                      "expression": "SUM(`total_billed_revenue`)"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              }
+            ],
+            "spec": {
+              "frame": {
+                "showTitle": true,
+                "title": "Total Billed Revenue"
+              },
+              "version": 2,
+              "widgetType": "counter",
+              "encodings": {
+                "value": {
+                  "fieldName": "sum(total_billed_revenue)",
+                  "rowNumber": 0
+                }
+              },
+              "data": {
+                "queryName": "main_query"
+              }
+            }
+          },
+          "position": {
+            "x": 0,
+            "y": 5,
+            "width": 4,
+            "height": 5
+          }
+        },
+        {
+          "widget": {
+            "name": "total_collected_revenue",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "executive_kpis",
+                  "fields": [
+                    {
+                      "name": "sum(total_collected_revenue)",
+                      "expression": "SUM(`total_collected_revenue`)"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              }
+            ],
+            "spec": {
+              "frame": {
+                "showTitle": true,
+                "title": "Total Collected Revenue"
+              },
+              "version": 2,
+              "widgetType": "counter",
+              "encodings": {
+                "value": {
+                  "fieldName": "sum(total_collected_revenue)",
+                  "rowNumber": 0
+                }
+              },
+              "data": {
+                "queryName": "main_query"
+              }
+            }
+          },
+          "position": {
+            "x": 4,
+            "y": 5,
+            "width": 4,
+            "height": 5
+          }
+        },
+        {
+          "widget": {
+            "name": "total_outstanding",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "executive_kpis",
+                  "fields": [
+                    {
+                      "name": "sum(total_outstanding_amount)",
+                      "expression": "SUM(`total_outstanding_amount`)"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              }
+            ],
+            "spec": {
+              "frame": {
+                "showTitle": true,
+                "title": "Total Outstanding Amount"
+              },
+              "version": 2,
+              "widgetType": "counter",
+              "encodings": {
+                "value": {
+                  "fieldName": "sum(total_outstanding_amount)",
+                  "rowNumber": 0
+                }
+              },
+              "data": {
+                "queryName": "main_query"
+              }
+            }
+          },
+          "position": {
+            "x": 8,
+            "y": 5,
+            "width": 4,
+            "height": 5
+          }
+        },
+        {
+          "widget": {
+            "name": "total_complaints",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "executive_kpis",
+                  "fields": [
+                    {
+                      "name": "sum(total_complaints)",
+                      "expression": "SUM(`total_complaints`)"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              }
+            ],
+            "spec": {
+              "frame": {
+                "showTitle": true,
+                "title": "Total Complaints"
+              },
+              "version": 2,
+              "widgetType": "counter",
+              "encodings": {
+                "value": {
+                  "fieldName": "sum(total_complaints)",
+                  "rowNumber": 0
+                }
+              },
+              "data": {
+                "queryName": "main_query"
+              }
+            }
+          },
+          "position": {
+            "x": 0,
+            "y": 10,
+            "width": 4,
+            "height": 5
+          }
+        },
+        {
+          "widget": {
+            "name": "monthly_revenue_trend",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "revenue_analysis",
+                  "fields": [
+                    {
+                      "name": "year_month",
+                      "expression": "`year_month`"
+                    },
+                    {
+                      "name": "sum(net_billed_amount)",
+                      "expression": "SUM(`net_billed_amount`)"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              }
+            ],
+            "spec": {
+              "frame": {
+                "showTitle": true,
+                "title": "Monthly Revenue Trend"
+              },
+              "version": 3,
+              "widgetType": "line",
+              "encodings": {
+                "x": {
+                  "fieldName": "year_month",
+                  "displayName": "year_month",
+                  "scale": {
+                    "type": "categorical"
+                  }
+                },
+                "y": {
+                  "fieldName": "sum(net_billed_amount)",
+                  "displayName": "net_billed_amount",
+                  "scale": {
+                    "type": "quantitative"
+                  }
+                },
+                "color": {
+                  "fieldName": "year_month",
+                  "displayName": "year_month",
+                  "scale": {
+                    "type": "categorical"
+                  }
+                }
+              },
+              "data": {
+                "queryName": "main_query"
+              }
+            }
+          },
+          "position": {
+            "x": 0,
+            "y": 15,
+            "width": 12,
+            "height": 8
+          }
+        },
+        {
+          "widget": {
+            "name": "revenue_by_plan",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "plan_performance",
+                  "fields": [
+                    {
+                      "name": "plan_name",
+                      "expression": "`plan_name`"
+                    },
+                    {
+                      "name": "sum(total_revenue)",
+                      "expression": "SUM(`total_revenue`)"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              }
+            ],
+            "spec": {
+              "frame": {
+                "showTitle": true,
+                "title": "Revenue by Plan"
+              },
+              "version": 3,
+              "widgetType": "bar",
+              "encodings": {
+                "x": {
+                  "fieldName": "plan_name",
+                  "displayName": "plan_name",
+                  "scale": {
+                    "type": "categorical"
+                  }
+                },
+                "y": {
+                  "fieldName": "sum(total_revenue)",
+                  "displayName": "total_revenue",
+                  "scale": {
+                    "type": "quantitative"
+                  }
+                },
+                "color": {
+                  "fieldName": "plan_name",
+                  "displayName": "plan_name",
+                  "scale": {
+                    "type": "categorical"
+                  }
+                }
+              },
+              "data": {
+                "queryName": "main_query"
+              }
+            }
+          },
+          "position": {
+            "x": 0,
+            "y": 23,
+            "width": 6,
+            "height": 8
+          }
+        },
+        {
+          "widget": {
+            "name": "billing_status",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "billing_status_series",
+                  "fields": [
+                    {
+                      "name": "status_type",
+                      "expression": "`status_type`"
+                    },
+                    {
+                      "name": "year_month",
+                      "expression": "`year_month`"
+                    },
+                    {
+                      "name": "sum(count)",
+                      "expression": "SUM(`count`)"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              }
+            ],
+            "spec": {
+              "frame": {
+                "showTitle": true,
+                "title": "Monthly Billing Status"
+              },
+              "version": 3,
+              "widgetType": "bar",
+              "encodings": {
+                "x": {
+                  "fieldName": "year_month",
+                  "displayName": "Month",
+                  "scale": {
+                    "type": "categorical"
+                  }
+                },
+                "y": {
+                  "fieldName": "sum(count)",
+                  "displayName": "Bills",
+                  "scale": {
+                    "type": "quantitative"
+                  }
+                },
+                "color": {
+                  "fieldName": "status_type",
+                  "displayName": "Status",
+                  "scale": {
+                    "type": "categorical"
+                  }
+                }
+              },
+              "data": {
+                "queryName": "main_query"
+              }
+            }
+          },
+          "position": {
+            "x": 6,
+            "y": 23,
+            "width": 6,
+            "height": 8
+          }
+        },
+        {
+          "widget": {
+            "name": "call_usage",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "usage_analysis",
+                  "fields": [
+                    {
+                      "name": "year_month",
+                      "expression": "`year_month`"
+                    },
+                    {
+                      "name": "sum(total_call_minutes)",
+                      "expression": "SUM(`total_call_minutes`)"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              }
+            ],
+            "spec": {
+              "frame": {
+                "showTitle": true,
+                "title": "Monthly Call Minutes"
+              },
+              "version": 3,
+              "widgetType": "line",
+              "encodings": {
+                "x": {
+                  "fieldName": "year_month",
+                  "displayName": "year_month",
+                  "scale": {
+                    "type": "categorical"
+                  }
+                },
+                "y": {
+                  "fieldName": "sum(total_call_minutes)",
+                  "displayName": "total_call_minutes",
+                  "scale": {
+                    "type": "quantitative"
+                  }
+                },
+                "color": {
+                  "fieldName": "year_month",
+                  "displayName": "year_month",
+                  "scale": {
+                    "type": "categorical"
+                  }
+                }
+              },
+              "data": {
+                "queryName": "main_query"
+              }
+            }
+          },
+          "position": {
+            "x": 0,
+            "y": 31,
+            "width": 6,
+            "height": 8
+          }
+        },
+        {
+          "widget": {
+            "name": "sms_usage",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "usage_analysis",
+                  "fields": [
+                    {
+                      "name": "year_month",
+                      "expression": "`year_month`"
+                    },
+                    {
+                      "name": "sum(total_sms)",
+                      "expression": "SUM(`total_sms`)"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              }
+            ],
+            "spec": {
+              "frame": {
+                "showTitle": true,
+                "title": "Monthly SMS Usage"
+              },
+              "version": 3,
+              "widgetType": "line",
+              "encodings": {
+                "x": {
+                  "fieldName": "year_month",
+                  "displayName": "year_month",
+                  "scale": {
+                    "type": "categorical"
+                  }
+                },
+                "y": {
+                  "fieldName": "sum(total_sms)",
+                  "displayName": "total_sms",
+                  "scale": {
+                    "type": "quantitative"
+                  }
+                },
+                "color": {
+                  "fieldName": "year_month",
+                  "displayName": "year_month",
+                  "scale": {
+                    "type": "categorical"
+                  }
+                }
+              },
+              "data": {
+                "queryName": "main_query"
+              }
+            }
+          },
+          "position": {
+            "x": 6,
+            "y": 31,
+            "width": 6,
+            "height": 8
+          }
+        },
+        {
+          "widget": {
+            "name": "data_usage",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "usage_analysis",
+                  "fields": [
+                    {
+                      "name": "year_month",
+                      "expression": "`year_month`"
+                    },
+                    {
+                      "name": "sum(total_data_gb)",
+                      "expression": "SUM(`total_data_gb`)"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              }
+            ],
+            "spec": {
+              "frame": {
+                "showTitle": true,
+                "title": "Monthly Data Usage (GB)"
+              },
+              "version": 3,
+              "widgetType": "line",
+              "encodings": {
+                "x": {
+                  "fieldName": "year_month",
+                  "displayName": "year_month",
+                  "scale": {
+                    "type": "categorical"
+                  }
+                },
+                "y": {
+                  "fieldName": "sum(total_data_gb)",
+                  "displayName": "total_data_gb",
+                  "scale": {
+                    "type": "quantitative"
+                  }
+                },
+                "color": {
+                  "fieldName": "year_month",
+                  "displayName": "year_month",
+                  "scale": {
+                    "type": "categorical"
+                  }
+                }
+              },
+              "data": {
+                "queryName": "main_query"
+              }
+            }
+          },
+          "position": {
+            "x": 0,
+            "y": 39,
+            "width": 6,
+            "height": 8
+          }
+        },
+        {
+          "widget": {
+            "name": "churn_risk_distribution",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "churn_risk",
+                  "fields": [
+                    {
+                      "name": "sum(customer_count)",
+                      "expression": "SUM(`customer_count`)"
+                    },
+                    {
+                      "name": "churn_risk_level",
+                      "expression": "`churn_risk_level`"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              }
+            ],
+            "spec": {
+              "frame": {
+                "showTitle": true,
+                "title": "Customer Churn Risk Distribution"
+              },
+              "version": 3,
+              "widgetType": "pie",
+              "encodings": {
+                "angle": {
+                  "fieldName": "sum(customer_count)",
+                  "scale": {
+                    "type": "quantitative"
+                  },
+                  "displayName": "customer_count"
+                },
+                "color": {
+                  "fieldName": "churn_risk_level",
+                  "displayName": "churn_risk_level",
+                  "scale": {
+                    "type": "categorical"
+                  }
+                }
+              },
+              "data": {
+                "queryName": "main_query"
+              }
+            }
+          },
+          "position": {
+            "x": 6,
+            "y": 39,
+            "width": 6,
+            "height": 8
+          }
+        },
+        {
+          "widget": {
+            "name": "complaints_by_category",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "complaint_analysis",
+                  "fields": [
+                    {
+                      "name": "category_name",
+                      "expression": "`category_name`"
+                    },
+                    {
+                      "name": "sum(total_complaints)",
+                      "expression": "SUM(`total_complaints`)"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              }
+            ],
+            "spec": {
+              "frame": {
+                "showTitle": true,
+                "title": "Complaints by Category"
+              },
+              "version": 3,
+              "widgetType": "bar",
+              "encodings": {
+                "x": {
+                  "fieldName": "category_name",
+                  "displayName": "category_name",
+                  "scale": {
+                    "type": "categorical"
+                  }
+                },
+                "y": {
+                  "fieldName": "sum(total_complaints)",
+                  "displayName": "total_complaints",
+                  "scale": {
+                    "type": "quantitative"
+                  }
+                },
+                "color": {
+                  "fieldName": "category_name",
+                  "displayName": "category_name",
+                  "scale": {
+                    "type": "categorical"
+                  }
+                }
+              },
+              "data": {
+                "queryName": "main_query"
+              }
+            }
+          },
+          "position": {
+            "x": 0,
+            "y": 47,
+            "width": 12,
+            "height": 8
+          }
+        },
+        {
+          "widget": {
+            "name": "resolution_time",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "complaint_analysis",
+                  "fields": [
+                    {
+                      "name": "category_name",
+                      "expression": "`category_name`"
+                    },
+                    {
+                      "name": "avg(avg_resolution_days)",
+                      "expression": "AVG(`avg_resolution_days`)"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              }
+            ],
+            "spec": {
+              "frame": {
+                "showTitle": true,
+                "title": "Average Complaint Resolution Time"
+              },
+              "version": 3,
+              "widgetType": "bar",
+              "encodings": {
+                "x": {
+                  "fieldName": "category_name",
+                  "displayName": "category_name",
+                  "scale": {
+                    "type": "categorical"
+                  }
+                },
+                "y": {
+                  "fieldName": "avg(avg_resolution_days)",
+                  "displayName": "avg_resolution_days",
+                  "scale": {
+                    "type": "quantitative"
+                  }
+                },
+                "color": {
+                  "fieldName": "category_name",
+                  "displayName": "category_name",
+                  "scale": {
+                    "type": "categorical"
+                  }
+                }
+              },
+              "data": {
+                "queryName": "main_query"
+              }
+            }
+          },
+          "position": {
+            "x": 6,
+            "y": 55,
+            "width": 6,
+            "height": 8
+          }
+        },
+        {
+          "widget": {
+            "name": "resolution_status",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "resolution_status_series",
+                  "fields": [
+                    {
+                      "name": "status_type",
+                      "expression": "`status_type`"
+                    },
+                    {
+                      "name": "category_name",
+                      "expression": "`category_name`"
+                    },
+                    {
+                      "name": "sum(count)",
+                      "expression": "SUM(`count`)"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              }
+            ],
+            "spec": {
+              "frame": {
+                "showTitle": true,
+                "title": "Complaint Resolution Status"
+              },
+              "version": 3,
+              "widgetType": "bar",
+              "encodings": {
+                "x": {
+                  "fieldName": "category_name",
+                  "displayName": "Category",
+                  "scale": {
+                    "type": "categorical"
+                  }
+                },
+                "y": {
+                  "fieldName": "sum(count)",
+                  "displayName": "Complaints",
+                  "scale": {
+                    "type": "quantitative"
+                  }
+                },
+                "color": {
+                  "fieldName": "status_type",
+                  "displayName": "Status",
+                  "scale": {
+                    "type": "categorical"
+                  }
+                }
+              },
+              "data": {
+                "queryName": "main_query"
+              }
+            }
+          },
+          "position": {
+            "x": 0,
+            "y": 55,
+            "width": 6,
+            "height": 8
+          }
+        },
+        {
+          "widget": {
+            "name": "plan_performance_table",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "plan_performance",
+                  "fields": [
+                    {
+                      "name": "plan_name",
+                      "expression": "`plan_name`"
+                    },
+                    {
+                      "name": "sum(total_revenue)",
+                      "expression": "SUM(`total_revenue`)"
+                    },
+                    {
+                      "name": "sum(active_subscriptions)",
+                      "expression": "SUM(`active_subscriptions`)"
+                    },
+                    {
+                      "name": "sum(cancelled_subscriptions)",
+                      "expression": "SUM(`cancelled_subscriptions`)"
+                    },
+                    {
+                      "name": "sum(total_data_gb)",
+                      "expression": "SUM(`total_data_gb`)"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              }
+            ],
+            "spec": {
+              "frame": {
+                "showTitle": true,
+                "title": "Plan Performance"
+              },
+              "version": 2,
+              "widgetType": "table",
+              "encodings": {
+                "columns": [
+                  {
+                    "fieldName": "plan_name"
+                  },
+                  {
+                    "fieldName": "sum(total_revenue)"
+                  },
+                  {
+                    "fieldName": "sum(active_subscriptions)"
+                  },
+                  {
+                    "fieldName": "sum(cancelled_subscriptions)"
+                  },
+                  {
+                    "fieldName": "sum(total_data_gb)"
+                  }
+                ]
+              },
+              "data": {
+                "queryName": "main_query"
+              }
+            }
+          },
+          "position": {
+            "x": 0,
+            "y": 63,
+            "width": 6,
+            "height": 8
+          }
+        },
+        {
+          "widget": {
+            "name": "high_risk_table",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "high_risk_customers",
+                  "fields": [
+                    {
+                      "name": "customer_name",
+                      "expression": "`customer_name`"
+                    },
+                    {
+                      "name": "current_plan",
+                      "expression": "`current_plan`"
+                    },
+                    {
+                      "name": "outstanding_amount",
+                      "expression": "`outstanding_amount`"
+                    },
+                    {
+                      "name": "total_complaints",
+                      "expression": "`total_complaints`"
+                    },
+                    {
+                      "name": "failed_payments",
+                      "expression": "`failed_payments`"
+                    },
+                    {
+                      "name": "payment_success_rate",
+                      "expression": "`payment_success_rate`"
+                    },
+                    {
+                      "name": "churn_risk_score",
+                      "expression": "`churn_risk_score`"
+                    }
+                  ],
+                  "disaggregated": true
+                }
+              }
+            ],
+            "spec": {
+              "frame": {
+                "showTitle": true,
+                "title": "High-Risk Customers"
+              },
+              "version": 2,
+              "widgetType": "table",
+              "encodings": {
+                "columns": [
+                  {
+                    "fieldName": "customer_name"
+                  },
+                  {
+                    "fieldName": "current_plan"
+                  },
+                  {
+                    "fieldName": "outstanding_amount"
+                  },
+                  {
+                    "fieldName": "total_complaints"
+                  },
+                  {
+                    "fieldName": "failed_payments"
+                  },
+                  {
+                    "fieldName": "payment_success_rate"
+                  },
+                  {
+                    "fieldName": "churn_risk_score"
+                  }
+                ]
+              },
+              "data": {
+                "queryName": "main_query"
+              }
+            }
+          },
+          "position": {
+            "x": 6,
+            "y": 63,
+            "width": 6,
+            "height": 8
+          }
+        },
+        {
+          "widget": {
+            "name": "outstanding_by_risk",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "churn_risk",
+                  "fields": [
+                    {
+                      "name": "churn_risk_level",
+                      "expression": "`churn_risk_level`"
+                    },
+                    {
+                      "name": "sum(outstanding_amount)",
+                      "expression": "SUM(`outstanding_amount`)"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              }
+            ],
+            "spec": {
+              "frame": {
+                "showTitle": true,
+                "title": "Outstanding Amount by Risk Level"
+              },
+              "version": 3,
+              "widgetType": "bar",
+              "encodings": {
+                "x": {
+                  "fieldName": "churn_risk_level",
+                  "displayName": "churn_risk_level",
+                  "scale": {
+                    "type": "categorical"
+                  }
+                },
+                "y": {
+                  "fieldName": "sum(outstanding_amount)",
+                  "displayName": "outstanding_amount",
+                  "scale": {
+                    "type": "quantitative"
+                  }
+                },
+                "color": {
+                  "fieldName": "churn_risk_level",
+                  "displayName": "churn_risk_level",
+                  "scale": {
+                    "type": "categorical"
+                  }
+                }
+              },
+              "data": {
+                "queryName": "main_query"
+              }
+            }
+          },
+          "position": {
+            "x": 0,
+            "y": 71,
+            "width": 12,
+            "height": 8
+          }
+        },
+        {
+          "widget": {
+            "name": "new_subscribers",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "executive_kpis",
+                  "fields": [
+                    {
+                      "name": "sum(active_subscriptions)",
+                      "expression": "SUM(`active_subscriptions`)"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              }
+            ],
+            "spec": {
+              "frame": {
+                "showTitle": true,
+                "title": "New Subscribers"
+              },
+              "version": 2,
+              "widgetType": "counter",
+              "encodings": {
+                "value": {
+                  "fieldName": "sum(active_subscriptions)",
+                  "rowNumber": 0
+                }
+              },
+              "data": {
+                "queryName": "main_query"
+              }
+            }
+          },
+          "position": {
+            "x": 4,
+            "y": 10,
+            "width": 3,
+            "height": 5
+          }
+        },
+        {
+          "widget": {
+            "name": "churned_customers",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "plan_performance",
+                  "fields": [
+                    {
+                      "name": "sum(cancelled_subscriptions)",
+                      "expression": "SUM(`cancelled_subscriptions`)"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              }
+            ],
+            "spec": {
+              "frame": {
+                "showTitle": true,
+                "title": "Churned Customers"
+              },
+              "version": 2,
+              "widgetType": "counter",
+              "encodings": {
+                "value": {
+                  "fieldName": "sum(cancelled_subscriptions)",
+                  "rowNumber": 0
+                }
+              },
+              "data": {
+                "queryName": "main_query"
+              }
+            }
+          },
+          "position": {
+            "x": 7,
+            "y": 10,
+            "width": 3,
+            "height": 5
+          }
+        },
+        {
+          "widget": {
+            "name": "avg_call_duration",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "usage_analysis",
+                  "fields": [
+                    {
+                      "name": "avg(total_call_minutes)",
+                      "expression": "AVG(`total_call_minutes`)"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              }
+            ],
+            "spec": {
+              "frame": {
+                "showTitle": true,
+                "title": "Avg Call Duration (min)"
+              },
+              "version": 2,
+              "widgetType": "counter",
+              "encodings": {
+                "value": {
+                  "fieldName": "avg(total_call_minutes)",
+                  "rowNumber": 0
+                }
+              },
+              "data": {
+                "queryName": "main_query"
+              }
+            }
+          },
+          "position": {
+            "x": 0,
+            "y": 79,
+            "width": 3,
+            "height": 5
+          }
+        },
+        {
+          "widget": {
+            "name": "avg_data_usage",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "usage_analysis",
+                  "fields": [
+                    {
+                      "name": "avg(total_data_gb)",
+                      "expression": "AVG(`total_data_gb`)"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              }
+            ],
+            "spec": {
+              "frame": {
+                "showTitle": true,
+                "title": "Avg Data Usage (GB)"
+              },
+              "version": 2,
+              "widgetType": "counter",
+              "encodings": {
+                "value": {
+                  "fieldName": "avg(total_data_gb)",
+                  "rowNumber": 0
+                }
+              },
+              "data": {
+                "queryName": "main_query"
+              }
+            }
+          },
+          "position": {
+            "x": 3,
+            "y": 79,
+            "width": 3,
+            "height": 5
+          }
+        },
+        {
+          "widget": {
+            "name": "churn_rate",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "executive_kpis",
+                  "fields": [
+                    {
+                      "name": "count(churn_rate_pct)",
+                      "expression": "COUNT(`churn_rate_pct`)"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              }
+            ],
+            "spec": {
+              "frame": {
+                "showTitle": true,
+                "title": "Churn Rate (%)"
+              },
+              "version": 2,
+              "widgetType": "counter",
+              "encodings": {
+                "value": {
+                  "fieldName": "count(churn_rate_pct)",
+                  "rowNumber": 0
+                }
+              },
+              "data": {
+                "queryName": "main_query"
+              }
+            }
+          },
+          "position": {
+            "x": 6,
+            "y": 79,
+            "width": 3,
+            "height": 5
+          }
+        },
+        {
+          "widget": {
+            "name": "arpu",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "executive_kpis",
+                  "fields": [
+                    {
+                      "name": "count(arpu)",
+                      "expression": "COUNT(`arpu`)"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              }
+            ],
+            "spec": {
+              "frame": {
+                "showTitle": true,
+                "title": "ARPU"
+              },
+              "version": 2,
+              "widgetType": "counter",
+              "encodings": {
+                "value": {
+                  "fieldName": "count(arpu)",
+                  "rowNumber": 0
+                }
+              },
+              "data": {
+                "queryName": "main_query"
+              }
+            }
+          },
+          "position": {
+            "x": 9,
+            "y": 79,
+            "width": 3,
+            "height": 5
+          }
+        },
+        {
+          "widget": {
+            "name": "payment_success",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "executive_kpis",
+                  "fields": [
+                    {
+                      "name": "count(payment_success_pct)",
+                      "expression": "COUNT(`payment_success_pct`)"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              }
+            ],
+            "spec": {
+              "frame": {
+                "showTitle": true,
+                "title": "Payment Success (%)"
+              },
+              "version": 2,
+              "widgetType": "counter",
+              "encodings": {
+                "value": {
+                  "fieldName": "count(payment_success_pct)",
+                  "rowNumber": 0
+                }
+              },
+              "data": {
+                "queryName": "main_query"
+              }
+            }
+          },
+          "position": {
+            "x": 0,
+            "y": 84,
+            "width": 3,
+            "height": 5
+          }
+        },
+        {
+          "widget": {
+            "name": "retention_rate",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "executive_kpis",
+                  "fields": [
+                    {
+                      "name": "count(retention_rate_pct)",
+                      "expression": "COUNT(`retention_rate_pct`)"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              }
+            ],
+            "spec": {
+              "frame": {
+                "showTitle": true,
+                "title": "Retention Rate (%)"
+              },
+              "version": 2,
+              "widgetType": "counter",
+              "encodings": {
+                "value": {
+                  "fieldName": "count(retention_rate_pct)",
+                  "rowNumber": 0
+                }
+              },
+              "data": {
+                "queryName": "main_query"
+              }
+            }
+          },
+          "position": {
+            "x": 3,
+            "y": 84,
+            "width": 3,
+            "height": 5
+          }
+        }
+      ],
+      "pageType": "PAGE_TYPE_CANVAS",
+      "layoutVersion": "GRID_V1"
+    }
+  ],
+  "uiSettings": {
+    "theme": {
+      "widgetHeaderAlignment": "ALIGNMENT_UNSPECIFIED"
+    },
+    "applyModeEnabled": false
+  }
+}
